@@ -4,7 +4,7 @@
   "description": "Simplest player framework",
   "main": "src/main.js",
   "scripts": {
-    "start": "beefy src/main.js:src/bundle.js --live -- -t hbsfy",
+    "start": "beefy src/main.js:src/bundle.js -- -t hbsfy",
     "build": "browserify -t hbsfy src/main.js -o src/bundle.js"
   },
   "author": "Thiago Pontes",

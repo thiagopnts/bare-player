@@ -2,7 +2,7 @@ var Player = require('../player');
 var $ = require('jquery');
 var mediator = require('../mediator');
 
-module.exports.VideoMedia = VideoMedia = Player.Media.extend({
+var VideoMedia = Player.Media.extend({
   initialize: function(args) {
     this.src = args.src;
   },
@@ -28,7 +28,6 @@ module.exports.VideoMedia = VideoMedia = Player.Media.extend({
     return this.playback.currentTime;
   },
   setCurrentTime: function(time) {
-    console.log('updating');
     this.playback.currentTime = time;
   }
 });
@@ -39,12 +38,13 @@ module.exports.VideoSurfaceView = VideoSurfaceView = Player.Surface.extend({
     'timeupdate': 'timeUpdated'
   },
   tagName: 'video',
+  className: 'surface',
   showInfo: function() {
     console.log('surface ' + this.model.cid);
   },
   timeUpdated: function() {
     var time = (100 / this.model.getDuration()) * this.model.getCurrentTime();
-    mediator.trigger('timeupdate:' + this.cid, time);
+    this.trigger('timeupdate', time);
   },
   render: function() {
     this.el.height = 420;
@@ -53,16 +53,27 @@ module.exports.VideoSurfaceView = VideoSurfaceView = Player.Surface.extend({
   }
 });
 
-module.exports.VideoSurface = VideoSurface = function(args) {
+var VideoSurface = function(args) {
   this.media = new VideoMedia({src: args.src || 'samples/video.mp4'});
   this.surface = new VideoSurfaceView({model: this.media});
+  this.listenTo(this.surface, 'timeupdate', this.proxy);
   this.el = this.surface.el;
+  this.$el = this.surface.$el;
 };
 
 VideoSurface.prototype = {
+  proxy: function(time) {
+    this.trigger('timeupdate', time);
+  },
   getId: function() {
     return this.surface.cid;
   },
+  hide: function() {
+    this.$el.hide();
+  },
+  show: function() {
+    this.$el.show();
+  }, 
   getDuration: function() {
     return this.media.getDuration();
   },
@@ -74,8 +85,10 @@ VideoSurface.prototype = {
   },
   render: function() {
     this.surface.render();
-    return this.surface.el;
+    return this.surface;
   }
 }
 
+_.extend(VideoSurface.prototype, Player.Events);
 
+module.exports = VideoSurface;

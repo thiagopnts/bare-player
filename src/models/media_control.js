@@ -1,10 +1,12 @@
 var Player = require('../player');
+var DefaultMediaControlView = require('../views/default_media_control_view');
+var _      = require('underscore');
 
-module.exports = Player.Model.extend({
+var DefaultMediaControl = Player.Model.extend({
   initialize: function(args) {
-    this.surface = args.surface;
+    this.surfaces = args.surfaces;
     this.currentSurface = 0;
-    this.surfaces = [this.surface];
+    this.surface = this.surfaces[0];
   },
   addSurface: function(surface) {
     this.surfaces.push(surface);
@@ -32,3 +34,31 @@ module.exports = Player.Model.extend({
     this.surface = surface;
   }
 });
+
+var MediaControl = function(args) {
+  this.model = args.model || new DefaultMediaControl({surfaces: args.surfaces});
+  this.view = args.view || new DefaultMediaControlView({model: this.model, surfaces: args.surfaces});
+  this.el = this.view.el;
+  this.listenTo(this.view, 'swap', this.proxy);
+};
+
+
+MediaControl.prototype = {
+  proxy: function(previousSurface) {
+    this.trigger('swap', previousSurface);
+  },
+  getCurrentSurface: function() {
+    return this.model.getCurrentSurface();
+  },
+  getSurfaces: function() {
+    return this.model.surfaces;
+  },
+  render: function() {
+    this.view.render();
+    return this.view;
+  }
+};
+
+_.extend(MediaControl.prototype, Player.Events);
+
+module.exports = MediaControl;
