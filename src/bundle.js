@@ -12457,7 +12457,7 @@ var Player = require('../player');
 var $ = require('jquery');
 var mediator = require('../mediator');
 
-module.exports.VideoMedia = VideoMedia = Player.Media.extend({
+var VideoMedia = Player.Media.extend({
   initialize: function(args) {
     this.src = args.src;
   },
@@ -12483,7 +12483,6 @@ module.exports.VideoMedia = VideoMedia = Player.Media.extend({
     return this.playback.currentTime;
   },
   setCurrentTime: function(time) {
-    console.log('updating');
     this.playback.currentTime = time;
   }
 });
@@ -12494,12 +12493,13 @@ module.exports.VideoSurfaceView = VideoSurfaceView = Player.Surface.extend({
     'timeupdate': 'timeUpdated'
   },
   tagName: 'video',
+  className: 'surface',
   showInfo: function() {
     console.log('surface ' + this.model.cid);
   },
   timeUpdated: function() {
     var time = (100 / this.model.getDuration()) * this.model.getCurrentTime();
-    mediator.trigger('timeupdate:' + this.cid, time);
+    this.trigger('timeupdate', time);
   },
   render: function() {
     this.el.height = 420;
@@ -12508,16 +12508,27 @@ module.exports.VideoSurfaceView = VideoSurfaceView = Player.Surface.extend({
   }
 });
 
-module.exports.VideoSurface = VideoSurface = function(args) {
+var VideoSurface = function(args) {
   this.media = new VideoMedia({src: args.src || 'samples/video.mp4'});
   this.surface = new VideoSurfaceView({model: this.media});
+  this.listenTo(this.surface, 'timeupdate', this.proxy);
   this.el = this.surface.el;
+  this.$el = this.surface.$el;
 };
 
 VideoSurface.prototype = {
+  proxy: function(time) {
+    this.trigger('timeupdate', time);
+  },
   getId: function() {
     return this.surface.cid;
   },
+  hide: function() {
+    this.$el.hide();
+  },
+  show: function() {
+    this.$el.show();
+  }, 
   getDuration: function() {
     return this.media.getDuration();
   },
@@ -12529,46 +12540,49 @@ VideoSurface.prototype = {
   },
   render: function() {
     this.surface.render();
-    return this.surface.el;
+    return this.surface;
   }
 }
 
+_.extend(VideoSurface.prototype, Player.Events);
 
+module.exports = VideoSurface;
 
-},{"../mediator":15,"../player":17,"jquery":11}],14:[function(require,module,exports){
+},{"../mediator":15,"../player":18,"jquery":11}],14:[function(require,module,exports){
 var MediaControl = require('./models/media_control');
-var MediaControlView = require('./views/media_control_view');
-var VideoSurface = require('./components/video_surface').VideoSurface;
+var WMPPlayer = require('./models/player');
+var VideoSurface = require('./components/video_surface');
 var $ = require('jquery');
 window.Backbone = require('backbone')
 
 $(document).ready(function() {
   var surface = new VideoSurface({src: 'samples/video.mp4'});
   var surface2 = new VideoSurface({src: 'samples/video2.mp4'});
-  var control = new MediaControl({surface: surface});
-  var view = new MediaControlView({model: control});
+  surface2.$el.addClass('pip');
 
-  control.addSurface(surface2);
-  $('body').html(surface.render());
-  $('body').append(surface2.render());
-  $('body').append(view.render().el);
+  var mediaControl = new MediaControl({surfaces: [surface, surface2]});
+  var player = new WMPPlayer({mediaControl: mediaControl});
+
+  $('body').html(player.render().el);
 });
 
 
 
-},{"./components/video_surface":13,"./models/media_control":16,"./views/media_control_view":19,"backbone":1,"jquery":11}],15:[function(require,module,exports){
+},{"./components/video_surface":13,"./models/media_control":16,"./models/player":17,"backbone":1,"jquery":11}],15:[function(require,module,exports){
 var Player = require('./player');
 
 module.exports = Player.Events;
 
-},{"./player":17}],16:[function(require,module,exports){
+},{"./player":18}],16:[function(require,module,exports){
 var Player = require('../player');
+var DefaultMediaControlView = require('../views/default_media_control_view');
+var _      = require('underscore');
 
-module.exports = Player.Model.extend({
+var DefaultMediaControl = Player.Model.extend({
   initialize: function(args) {
-    this.surface = args.surface;
+    this.surfaces = args.surfaces;
     this.currentSurface = 0;
-    this.surfaces = [this.surface];
+    this.surface = this.surfaces[0];
   },
   addSurface: function(surface) {
     this.surfaces.push(surface);
@@ -12597,7 +12611,67 @@ module.exports = Player.Model.extend({
   }
 });
 
-},{"../player":17}],17:[function(require,module,exports){
+var MediaControl = function(args) {
+  this.model = args.model || new DefaultMediaControl({surfaces: args.surfaces});
+  this.view = args.view || new DefaultMediaControlView({model: this.model, surfaces: args.surfaces});
+  this.el = this.view.el;
+  this.listenTo(this.view, 'swap', this.proxy);
+};
+
+
+MediaControl.prototype = {
+  proxy: function(previousSurface) {
+    this.trigger('swap', previousSurface);
+  },
+  getCurrentSurface: function() {
+    return this.model.getCurrentSurface();
+  },
+  getSurfaces: function() {
+    return this.model.surfaces;
+  },
+  render: function() {
+    this.view.render();
+    return this.view;
+  }
+};
+
+_.extend(MediaControl.prototype, Player.Events);
+
+module.exports = MediaControl;
+
+},{"../player":18,"../views/default_media_control_view":20,"underscore":12}],17:[function(require,module,exports){
+var Player = require('../player');
+var mediator = require('../mediator');
+var _ = require('underscore');
+
+var WMPPlayer = Player.View.extend({
+  className: 'player-container',
+  initialize: function(args) {
+    //maybe the player must receive all surfaces and pass it to media control, instead the inverse.
+    this.mediaControl = args.mediaControl;
+    this.mediaControl.render();
+    this.listenTo(this.mediaControl, 'swap', this.swap);
+  },
+  initializeSurfaces: function(surface) {
+    surface.render();
+    return surface.el
+  },
+  swap: function(previousSurface) {
+    previousSurface.hide();
+    this.mediaControl.getCurrentSurface().show();
+  },
+  render: function() {
+    var elements = _.map(this.mediaControl.getSurfaces(), this.initializeSurfaces, this);
+    this.$el.html(elements);
+    this.mediaControl.getCurrentSurface().show();
+    this.$el.append(this.mediaControl.el);
+    return this;
+  }
+});
+
+module.exports = WMPPlayer;
+
+},{"../mediator":15,"../player":18,"underscore":12}],18:[function(require,module,exports){
 Backbone = require('backbone');
 $ = require('jquery');
 Backbone.$ = $;
@@ -12612,7 +12686,7 @@ module.exports = {
   Surface: Backbone.View
 };
 
-},{"backbone":1,"jquery":11,"underscore":12}],18:[function(require,module,exports){
+},{"backbone":1,"jquery":11,"underscore":12}],19:[function(require,module,exports){
 // hbsfy compiled Handlebars template
 var Handlebars = require('hbsfy/runtime');
 module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
@@ -12621,24 +12695,27 @@ helpers = this.merge(helpers, Handlebars.helpers); data = data || {};
   
 
 
-  return "<h3>Media Control</h3>\n<button class=\"play\">play</button>\n<button class=\"pause\">pause</button>\n<input class=\"seekbar\" type=\"range\" name=\"seekbar\" value=\"0\"/>\n<button class=\"swap\">swap surfaces</button>\n";
+  return "<h3>Media Control</h3>\n<button class=\"play\">play</button>\n<button class=\"pause\">pause</button>\n<input class=\"seekbar\" type=\"range\" name=\"seekbar\" value=\"0\"/>\n<button class=\"swap\">swap containers</button>\n";
   });
 
-},{"hbsfy/runtime":10}],19:[function(require,module,exports){
+},{"hbsfy/runtime":10}],20:[function(require,module,exports){
 var Player = require('../player');
+var _        = require('underscore');
 var mediator = require('../mediator');
 var template = require('../templates/media_control.hbs');
 
 module.exports = Player.View.extend({
+  className: 'media-control',
   events: {
     'click .play': 'play',
     'click .pause': 'pause',
     'click .swap': 'swap',
     'change .seekbar': 'seek'
   },
-  initialize: function() {
-    //TODO: MediaControl must watch ONLY the the timeupdate events from the current surface
-    mediator.on('timeupdate:' + this.model.getCurrentSurface().getId(), this.updateBar, this);
+  initialize: function(args) {
+    //remove surfaces from here it's not used anymore.
+    //the media control should not render it, it's not its responsability.
+    this.listenTo(this.model.getCurrentSurface(), 'timeupdate', this.updateBar);
   },
   template: template,
   play: function() {
@@ -12648,14 +12725,14 @@ module.exports = Player.View.extend({
     this.model.pause();
   },
   swap: function() {
-    mediator.off('timeupdate:' + this.model.getCurrentSurface().getId(), this.updateBar, this);
+    //say everyone which surface is leaving
+    this.trigger('swap', this.model.getCurrentSurface());
+    this.stopListening(this.model.getCurrentSurface());
     this.model.swap();
-    mediator.on('timeupdate:' + this.model.getCurrentSurface().getId(), this.updateBar, this);
+    this.listenTo(this.model.getCurrentSurface(), 'timeupdate', this.updateBar);
   },
   seek: function(e) {
-    console.log('MediaControl#change');
     var time = this.model.getCurrentSurface().getDuration() * (this.$(e.target).val() / 100);
-    console.log('should seek to ' + time);
     //seek only works if the current server supports byte range requests.
     this.model.getCurrentSurface().setCurrentTime(time);
   },
@@ -12664,9 +12741,10 @@ module.exports = Player.View.extend({
   },
 
   render: function() {
-    this.$el.html(this.template({duration: this.model.getCurrentSurface().getDuration()}));
+    this.$el.html(this.template());
+    //this.$el.prepend(this.model.getCurrentSurface().el);
     return this;
   }
 });
 
-},{"../mediator":15,"../player":17,"../templates/media_control.hbs":18}]},{},[14])
+},{"../mediator":15,"../player":18,"../templates/media_control.hbs":19,"underscore":12}]},{},[14])
