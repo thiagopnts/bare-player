@@ -16,7 +16,7 @@ var PlayerCore = Component.extend({
   className: 'player',
   initialize: function(args) {
     //var resources = args.resources;
-    var resources = ['samples/video2.mp4', 'samples/video1.mp4'];
+    var resources = ['samples/video1.mp4', 'samples/video1.mp4'];
     this.containers = [];
     for(var i = 0, l = resources.length; i < l; i++) {
       var container = new VideoContainer({src: resources[i]});
