@@ -4,56 +4,33 @@
 
 var Component = require('../base/component');
 
-var VideoContainer = Component.extend({
+var Container = Component.extend({
   events: {
-    'click': 'showInfo',
-    'timeupdate': 'timeUpdated',
-    'ended': 'ended'
+    'click': 'clicked'
   },
-  tagName: 'video',
-  className: 'container',
-  initialize: function(args) {
-    this.el.src = args.src;
-    this.playback = this.el;
+  initialize: function() {
+    this.trigger('container:ready');
   },
-  play: function() {
-    this.playback.play();
-  },
-  pause: function() {
-    this.playback.pause();
-  },
-  mute: function() {
-    this.playback.volume = 0;
-  },
-  unmute: function() {
-    this.playback.volume = 1;
-  },
-  isMuted: function() {
-    return !!this.playback.volume
-  },
-  ended: function() {
-    this.trigger('container:timeupdate', 0);
-  },
-  showInfo: function() {
-    this.trigger('container:click', this);
-    console.log('container ' + this.cid);
-  },
-  setCurrentTime: function(time) {
-    this.playback.currentTime = time;
-  },
-  getCurrentTime: function() {
-    return this.playback.currentTime;
-  },
-  getDuration: function() {
-    return this.playback.duration;
-  },
-  timeUpdated: function() {
-    var time = (100 / this.playback.duration) * this.playback.currentTime;
+  timeUpdated: function(time) {
     this.trigger('container:timeupdate', time);
   },
-  render: function() {
-    return this;
+  play: function() {
+    this.trigger('container:play');
+  },
+  pause: function() {
+    this.trigger('container:pause');
+  },
+  clicked: function() {
+    this.trigger('container:click', this);
+  },
+  setCurrentTime: function(time) {
+    this.trigger('container:seek', time);
+  },
+  getCurrentTime: function() {
+  },
+  requestFullscreen: function() {
+    this.trigger('container:fullscreen');
   }
 });
 
-module.exports = VideoContainer;
+module.exports = Container;

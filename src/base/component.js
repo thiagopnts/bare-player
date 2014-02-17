@@ -14,7 +14,7 @@ var Component = function(options) {
 
 var delegateEventSplitter = /^(\S+)\s*(.*)$/;
 
-var viewOptions = ['object', 'collection', 'el', 'id', 'attributes', 'className', 'tagName', 'events'];
+var viewOptions = ['object', 'playback', 'collection', 'el', 'id', 'attributes', 'className', 'tagName', 'events'];
 
 _.extend(Component.prototype, Events, {
 
