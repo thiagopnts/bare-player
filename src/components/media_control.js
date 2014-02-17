@@ -32,13 +32,14 @@ module.exports = MediaControl = Component.extend({
     }
     this.container = args.container;
     this.container.unmute();
+    this.updateSeekBar(this.container.getCurrentTime());
     this.listenTo(this.container, 'container:timeupdate', this.updateSeekBar);
   },
   updateSeekBar: function(time) {
     this.$('.seekbar').val(time);
   },
   seek: function(e) {
-    var time = this.container.getDuration() * (this.$(e.target).val() / 100);
+    var time = this.container.getDuration() * (this.$('.seekbar').val() / 100);
     this.container.setCurrentTime(time);
   },
   render: function() {

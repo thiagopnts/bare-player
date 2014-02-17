@@ -16,6 +16,7 @@ var PlayerCore = Component.extend({
   className: 'player',
   initialize: function(args) {
     //var resources = args.resources;
+    //does this kind of info comes from playback handler?
     var resources = ['samples/video1.mp4', 'samples/video1.mp4'];
     this.containers = [];
     for(var i = 0, l = resources.length; i < l; i++) {

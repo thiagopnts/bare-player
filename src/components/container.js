@@ -41,6 +41,9 @@ var VideoContainer = Component.extend({
   setCurrentTime: function(time) {
     this.playback.currentTime = time;
   },
+  getCurrentTime: function() {
+    return this.playback.currentTime;
+  },
   getDuration: function() {
     return this.playback.duration;
   },

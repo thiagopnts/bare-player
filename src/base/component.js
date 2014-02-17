@@ -4,7 +4,7 @@ var extend = require('./utils').extend;
 var Events = require('./events');
 
 var Component = function(options) {
-  this.cid = _.uniqueId('view');
+  this.cid = _.uniqueId('c');
   options || (options = {});
   _.extend(this, _.pick(options, viewOptions));
   this._ensureElement();
